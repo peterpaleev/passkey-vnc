@@ -1,0 +1,7 @@
+node_modules/
+data/
+.env
+*.log
+*.pid
+.DS_Store
+coverage/
