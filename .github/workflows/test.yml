@@ -1,0 +1,41 @@
+name: Test
+on:
+  push:
+  pull_request:
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y xvfb x11vnc xauth x11-utils openbox xterm
+      - run: npm ci
+      - run: npm run check
+      - name: Run signed passkey and desktop integration test
+        shell: bash
+        run: |
+          set -euo pipefail
+          export XDG_RUNTIME_DIR="$(mktemp -d)"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          export REMOTE_DISPLAY_NUMBER=99 REMOTE_VNC_PORT=5901
+          bash scripts/run-desktop.sh > "$RUNNER_TEMP/desktop.log" 2>&1 &
+          desktop_pid=$!
+          trap 'kill "$desktop_pid" 2>/dev/null || true' EXIT
+          for i in {1..50}; do
+            if (echo > /dev/tcp/127.0.0.1/5901) 2>/dev/null; then break; fi
+            sleep 0.2
+          done
+          export REMOTE_DATA="$(mktemp -d)" REMOTE_PORT=8780 REMOTE_ORIGIN=http://localhost:8780
+          invite_url=$(node server.mjs --invite)
+          export TEST_INVITE=${invite_url##*invite=}
+          node server.mjs > "$RUNNER_TEMP/web.log" 2>&1 &
+          web_pid=$!
+          trap 'kill "$web_pid" "$desktop_pid" 2>/dev/null || true' EXIT
+          for i in {1..50}; do
+            if curl -fsS http://127.0.0.1:8780/remote/api/session >/dev/null 2>&1; then break; fi
+            sleep 0.2
+          done
+          node tests/remote-auth.mjs
