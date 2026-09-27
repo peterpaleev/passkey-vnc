@@ -1,0 +1,16 @@
+[Unit]
+Description=Remote Desk passkey web app
+Requires=remote-desk-desktop.service
+After=remote-desk-desktop.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/passkey-vnc
+EnvironmentFile=%h/.config/remote-desk/environment
+ExecStart=/usr/bin/node %h/passkey-vnc/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

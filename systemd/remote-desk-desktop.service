@@ -1,0 +1,14 @@
+[Unit]
+Description=Remote Desk virtual X11 desktop and loopback VNC
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/remote-desk/environment
+ExecStart=/usr/bin/bash %h/passkey-vnc/scripts/run-desktop.sh
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
